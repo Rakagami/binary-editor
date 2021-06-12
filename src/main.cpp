@@ -4,23 +4,33 @@
 #include <vector>
 #include <time.h>
 
-// Unix spcific
-#include <unistd.h>
-
+// Unix spcific #include <unistd.h> 
 using namespace std;
 
 // Size of a word in bit
 #define WORDSIZE 8
 // How many columns are displayed per line (one column is one word)
 #define WORDCOLS 4
-
 #define MAXBUF 30
 
-int inputhandler(WINDOW * win);
+#define BIGENDIAN true
+
+int inputhandler(struct glbctx &ctx, WINDOW * win);
 int samplebuf(vector<uint8_t> buf, int i);
 void displaybinwin(WINDOW * binwin, vector<uint8_t> buf);
 void displayhexwin(WINDOW * hexwin, vector<uint8_t> buf);
-// We want 3 Windows: +++++++++++++++++++++ + input             + +                   +
+
+struct glbctx {
+    vector<uint8_t> buf;
+    uint8_t inputbuf;
+    size_t bitptr;
+    size_t byteptr;
+};
+
+// We want 3 Windows: 
+// +++++++++++++++++++++
+// + input             + 
+// +                   +
 // +                   +
 // +++++++++++++++++++++
 // + hex + binary      +
@@ -29,14 +39,13 @@ void displayhexwin(WINDOW * hexwin, vector<uint8_t> buf);
 // +++++++++++++++++++++
 int main(int argc, char * argv[]){
     /* Initilaizations */
-    vector<uint8_t> buf;
-    size_t cnt = 0; // Count of written bits
-    buf.clear();
-    buf.resize(MAXBUF);
-    buf[0] = 0x95;
-    buf[1] = 0xF2;
-    buf[2] = 0x6F;
-    
+    struct glbctx ctx;
+    ctx.inputbuf = 0x0;
+    ctx.bitptr = 0; 
+    ctx.byteptr = 0;
+
+    ctx.buf.clear();
+    ctx.buf.resize(MAXBUF);
 
     /* NCURSES START */
     initscr();
@@ -62,9 +71,9 @@ int main(int argc, char * argv[]){
 
     while(1)
     {
-        inputhandler(inputwin);
-        displaybinwin(binwin, buf);
-        displayhexwin(hexwin, buf);
+        inputhandler(ctx, inputwin);
+        displaybinwin(binwin, ctx.buf);
+        displayhexwin(hexwin, ctx.buf);
         refresh();
     }
 
@@ -74,27 +83,50 @@ int main(int argc, char * argv[]){
     /* NCURSES END */
 }
 
-int inputhandler(WINDOW * win) {
+int inputhandler(struct glbctx &ctx, WINDOW * win) {
     int c = getch();
     wmove(win, 1, 1);
+    uint8_t byte, mask;
     switch(c) {
-        case KEY_UP:
-            wprintw(win, "You pressed up!");
-            break;
-        case KEY_DOWN:
-            wprintw(win, "You pressed down!");
-            break;
-        case KEY_LEFT:
-            wprintw(win, "You pressed left!");
-            break;
-        case KEY_RIGHT:
-            wprintw(win, "You pressed right!");
-            break;
+        //case KEY_UP:
+        //    wprintw(win, "You pressed up!");
+        //    break;
+        //case KEY_DOWN:
+        //    wprintw(win, "You pressed down!");
+        //    break;
+        //case KEY_LEFT:
+        //    wprintw(win, "You pressed left!");
+        //    break;
+        //case KEY_RIGHT:
+        //    wprintw(win, "You pressed right!");
+        //    break;
         case 'o':
             wprintw(win, "You pressed o (O)!");
+            byte = ctx.buf[ctx.byteptr];
+            mask;
+            if(BIGENDIAN) {
+                mask = 0x80 >> ctx.bitptr++;
+                mask = ~mask;
+            } else {
+                mask = 0x1 << ctx.bitptr++;
+                mask = ~mask;
+            }
+            ctx.buf[ctx.byteptr] = byte & mask;
+            ctx.byteptr += ctx.bitptr >> 3;
+            ctx.bitptr = ctx.bitptr % 8;
             break;
         case 'i':
             wprintw(win, "You pressed i (1)!");
+            byte = ctx.buf[ctx.byteptr];
+            mask;
+            if(BIGENDIAN) {
+                mask = 0x80 >> ctx.bitptr++;
+            } else {
+                mask = 0x1 << ctx.bitptr++;
+            }
+            ctx.buf[ctx.byteptr] = byte | mask;
+            ctx.byteptr += ctx.bitptr >> 3;
+            ctx.bitptr = ctx.bitptr % 8;
             break;
         default:
             wprintw(win, "PRESS A BUTTON");

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 3.0)
 
 #---------- WHAT TO CONFIG ------------#
 set(PROJECT_NAME "binary-editor")
@@ -15,6 +15,8 @@ set(SOURCES src/main.cpp)
 
 add_executable(${BINARY_NAME} ${SOURCES})
 target_link_libraries(${BINARY_NAME} ${PROJECT_LINK_LIBS})
+
+target_compile_options(${BINARY_NAME} PUBLIC -Wall -Wpedantic)
 
 add_custom_target(run
     COMMAND ${BINARY_NAME}
